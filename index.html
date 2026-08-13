@@ -3,153 +3,288 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Taksi Çepte - Navigasyon Pro</title>
+  <title>TaksiCepte - Antalya</title>
 
-  <!-- 1. Leaflet (Harita) Kütüphanesi -->
+  <!-- Leaflet Harita & Rota Kütüphaneleri -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- 2. Leaflet Routing Machine (Rota) Kütüphanesi -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
-  <!-- 3. İkonlar ve Google Font -->
+  <!-- İkonlar & Font -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body, html { width: 100%; height: 100%; background: #1a1e24; color: #fff; overflow: hidden; }
 
-    #map { width: 100%; height: 100vh; z-index: 1; }
+    /* 1. GİRİŞ EKRANI (AÇILIŞ PANELDİR) */
+    #welcome-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #181d24; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .welcome-card {
+      width: 100%; max-width: 380px; background: #212730;
+      border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.08); text-align: center; padding-bottom: 25px;
+    }
+    .hero-img {
+      width: 100%; height: 200px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2), #212730),
+                  url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=800&q=80') center/cover;
+      display: flex; align-items: flex-start; padding: 20px;
+    }
+    .brand-badge {
+      background: #f1c40f; color: #000; font-weight: 700; font-size: 14px;
+      padding: 6px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px;
+    }
+    .welcome-title { font-size: 20px; font-weight: 700; margin: 15px 20px 5px; text-align: left; }
+    .welcome-sub { font-size: 12px; color: #a0a6b1; margin: 0 20px 20px; text-align: left; line-height: 1.4; }
+    
+    .role-btn {
+      margin: 10px 20px; padding: 16px; border-radius: 16px; border: none;
+      display: flex; align-items: center; gap: 15px; cursor: pointer; text-align: left;
+      transition: transform 0.2s;
+    }
+    .role-btn:active { transform: scale(0.98); }
+    .role-btn.passenger { background: #f1c40f; color: #000; }
+    .role-btn.driver { background: #2c3340; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+    .role-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .passenger .role-icon { background: rgba(0,0,0,0.1); color: #000; }
+    .driver .role-icon { background: rgba(255,255,255,0.08); color: #f1c40f; }
 
-    /* Üst Arama UI'ı (Sarı İnci Tarzı) */
-    .ui-overlay-top {
-      position: absolute; top: 15px; left: 15px; right: 15px;
-      z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+    /* 2. HARİTA VE UYGULAMA PANELİ */
+    #app-screen { width: 100%; height: 100vh; position: relative; display: none; }
+    #map { width: 100%; height: 100%; z-index: 1; }
+
+    /* Üst Arama Paneli */
+    .top-panel {
+      position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1000;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .app-header-bar {
+      background: #181d24; color: #fff; padding: 12px 18px; border-radius: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .role-indicator { font-size: 12px; background: #f1c40f; color: #000; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+
+    .search-card {
+      background: #fff; border-radius: 16px; padding: 12px 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 10px;
+    }
+    .input-row { display: flex; align-items: center; gap: 10px; color: #333; }
+    .input-row input {
+      width: 100%; border: none; outline: none; font-size: 14px; font-weight: 500; color: #222;
     }
 
-    .header-bar {
-      background: #000; color: #fff; border-radius: 12px;
-      padding: 15px; font-weight: 600; font-size: 18px;
-      display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    /* Otomatik Tamamlama (Öngörücü) Listesi */
+    .suggestions-list {
+      background: #fff; border-radius: 12px; max-height: 180px; overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-top: 5px; display: none;
+    }
+    .suggestion-item {
+      padding: 10px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eee;
+      cursor: pointer; display: flex; align-items: center; gap: 10px;
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: #f8f9fa; }
+
+    /* GPS Butonu */
+    .btn-gps {
+      position: absolute; right: 15px; bottom: 100px; z-index: 1000;
+      width: 48px; height: 48px; background: #fff; color: #333; border-radius: 50%;
+      border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex;
+      align-items: center; justify-content: center; font-size: 18px; cursor: pointer;
     }
 
-    .search-input-group {
-      background: #fff; border-radius: 12px;
-      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    /* Alt Navigasyon Barı */
+    .bottom-nav {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
+      background: #181d24; border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex; justify-content: space-around; padding: 12px 0 20px;
     }
-    .search-input-group i { color: #888; font-size: 18px; }
-    .search-input-group input {
-      border: none; outline: none; width: 100%;
-      font-size: 15px; color: #333;
-    }
+    .nav-btn { display: flex; flex-direction: column; align-items: center; color: #8a92a0; font-size: 11px; text-decoration: none; gap: 4px; }
+    .nav-btn.active { color: #f1c40f; }
+    .nav-btn i { font-size: 18px; }
 
-    /* Alt Kontrol UI'ı */
-    .ui-overlay-bottom {
-      position: absolute; bottom: 30px; left: 15px; right: 15px;
-      z-index: 1000; display: flex; flex-direction: column; gap: 8px;
-    }
-
-    .btn-action {
-      background: #000; color: #fff; border: none;
-      width: 100%; padding: 16px; border-radius: 12px;
-      font-size: 16px; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    .btn-action:hover { background: #222; }
-
-    /* Rota Talimatlar Paneli (Gizli) */
+    /* Gizli Rota Paneli */
     .leaflet-routing-container { display: none !important; }
   </style>
 </head>
 <body>
 
-  <!-- Üst Arayüz -->
-  <div class="ui-overlay-top">
-    <div class="header-bar">
-      <span>Taksi Çepte</span>
-      <i class="fa-solid fa-bars"></i>
-    </div>
-    <div class="search-input-group">
-      <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
-      <input type="text" id="destination" placeholder="Nereye Gidilecek? (Örn: Konyaaltı Beach)">
+  <!-- 1. HOŞ GELDİNİZ / GİRİŞ EKRANI -->
+  <div id="welcome-screen">
+    <div class="welcome-card">
+      <div class="hero-img">
+        <div class="brand-badge"><i class="fa-solid fa-location-dot"></i> TaksiCepte</div>
+      </div>
+      <div class="welcome-title">Antalya'da bir dokunuşla taksi</div>
+      <div class="welcome-sub">Kaleiçi'nden Lara'ya, havalimanından şehir merkezine hızlı ve güvenli ulaşım.</div>
+
+      <p style="font-size: 11px; color: #777; margin-bottom: 10px; font-weight: 600;">NASIL DEVAM ETMEK İSTERSİNİZ?</p>
+
+      <button class="role-btn passenger" onclick="selectRole('yolcu')">
+        <div class="role-icon"><i class="fa-solid fa-user"></i></div>
+        <div>
+          <div style="font-weight: 700; font-size: 15px;">Yolcu olarak devam et</div>
+          <div style="font-size: 12px; opacity: 0.8;">Taksi çağır, canlı takip et</div>
+        </div>
+      </button>
+
+      <button class="role-btn driver" onclick="selectRole('surucu')">
+        <div class="role-icon"><i class="fa-solid fa-taxi"></i></div>
+        <div>
+          <div style="font-weight: 700; font-size: 15px;">Sürücü olarak devam et</div>
+          <div style="font-size: 12px; color: #a0a6b1;">Çevrim içi ol, talepleri kabul et</div>
+        </div>
+      </button>
     </div>
   </div>
 
-  <!-- Harita Alanı -->
-  <div id="map"></div>
+  <!-- 2. CANLI HARİTA & ÇAĞRI UYGULAMASI -->
+  <div id="app-screen">
+    <div class="top-panel">
+      <div class="app-header-bar">
+        <span style="font-weight: 700;"><i class="fa-solid fa-taxi" style="color: #f1c40f;"></i> TaksiCepte</span>
+        <span class="role-indicator" id="role-tag">Yolcu</span>
+      </div>
 
-  <!-- Alt Arayüz -->
-  <div class="ui-overlay-bottom">
-    <button class="btn-action" onclick="rotaCiz()">
-      <i class="fa-solid fa-route"></i> Rota Çiz ve Taksi Ara
-    </button>
+      <div class="search-card">
+        <div class="input-row">
+          <i class="fa-solid fa-circle-dot" style="color: #2ecc71;"></i>
+          <input type="text" id="origin-input" placeholder="Mevcut konumunuz yükleniyor..." readonly>
+        </div>
+        <hr style="border: none; border-top: 1px solid #eee;">
+        <div class="input-row">
+          <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
+          <input type="text" id="dest-input" placeholder="Nereye gidilecek? (Örn: Konyaaltı, Lara, Kepez)" oninput="searchPlaces(this.value)">
+        </div>
+      </div>
+
+      <div id="suggestions" class="suggestions-list"></div>
+    </div>
+
+    <!-- Harita -->
+    <div id="map"></div>
+
+    <!-- Mevcut Konuma Odaklan GPS Butonu -->
+    <button class="btn-gps" onclick="getCurrentLocation()"><i class="fa-solid fa-crosshairs"></i></button>
+
+    <!-- Alt Navigasyon Barı -->
+    <div class="bottom-nav">
+      <a href="#" class="nav-btn active" onclick="location.reload()"><i class="fa-solid fa-car"></i>Taksi</a>
+      <a href="#" class="nav-btn"><i class="fa-solid fa-clock-history"></i>Gözat</a>
+      <a href="#" class="nav-btn"><i class="fa-solid fa-bell"></i>Bildirimler</a>
+      <a href="#" class="nav-btn" onclick="document.getElementById('welcome-screen').style.display='flex'"><i class="fa-solid fa-user"></i>Hesap</a>
+    </div>
   </div>
 
   <script>
-    // 1. Haritayı Başlat (Antalya Merkez Odaklı)
-    const map = L.map('map', { zoomControl: false }).setView([36.884804, 30.705601], 13);
+    let map, userLatLng, userMarker, destMarker, routingControl;
+    let selectedRole = 'yolcu';
 
-    // OpenStreetMap Harita Katmanı
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    let userMarker, destinationMarker, routingControl;
-
-    // 2. Canlı GPS Konumunu Al
-    map.locate({setView: true, maxZoom: 16});
-
-    function onLocationFound(e) {
-      if (userMarker) map.removeLayer(userMarker);
-      userMarker = L.marker(e.latlng).addTo(map).bindPopup("Siz Buradasınız").openPopup();
-    }
-    map.on('locationfound', onLocationFound);
-
-    function onLocationError(e) {
-      alert("Konumunuza erişilemedi, lütfen izin verin.");
-    }
-    map.on('locationerror', onLocationError);
-
-    // 3. Rota Çizme ve Konum Bulma Fonksiyonu (Gerçek Zamanlı)
-    async function rotaCiz() {
-      const destination = document.getElementById('destination').value;
-      if (!destination) return alert("Lütfen gidilecek yeri yazın!");
-
-      // Adresi koordinata çevir (Geocoding)
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${destination},Antalya`);
-      const data = await response.json();
+    function selectRole(role) {
+      selectedRole = role;
+      document.getElementById('welcome-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'block';
+      document.getElementById('role-tag').innerText = role === 'yolcu' ? 'Yolcu' : 'Sürücü Moda';
       
-      if (data.length > 0) {
-        const destCoords = [data[0].lat, data[0].lon];
+      initMap();
+    }
 
-        // Varsa eski rota ve markerları sil
-        if (routingControl) map.removeControl(routingControl);
-        if (destinationMarker) map.removeLayer(destinationMarker);
+    function initMap() {
+      if(map) return;
+      
+      // Antalya Merkezli Başlat
+      map = L.map('map', { zoomControl: false }).setView([36.8848, 30.7056], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // Varış noktasına marker ekle
-        destinationMarker = L.marker(destCoords).addTo(map).bindPopup(destination).openPopup();
+      // Konumu Al
+      getCurrentLocation();
+    }
 
-        // Rota çizgisini ekle
-        routingControl = L.Routing.control({
-          waypoints: [
-            userMarker.getLatLng(),
-            L.latLng(destCoords)
-          ],
-          routeWhileDragging: false,
-          show: false, // Talimat panelini gizle
-          lineOptions: { styles: [{ color: '#2c3e50', opacity: 0.8, weight: 6 }] } // Mavi rota çizgisi
-        }).addTo(map);
+    // GPS Otomatik Konum Bulma
+    function getCurrentLocation() {
+      map.locate({setView: true, maxZoom: 16});
+    }
 
-        alert("Rota çizildi! Taksi sizi bekliyor.");
-      } else {
-        alert("Konum bulunamadı, daha detaylı yazmayı deneyin (Örn: Konyaaltı Belediyesi).");
+    map.on('locationfound', function(e) {
+      userLatLng = e.latlng;
+      if(userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker(e.latlng).addTo(map).bindPopup("Mevcut Konumunuz").openPopup();
+
+      // Adresi ters çevirip kutuya yaz (Reverse Geocoding)
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
+        .then(res => res.json())
+        .then(data => {
+          const street = data.address.road || data.address.suburb || "Antalya (Mevcut Konum)";
+          document.getElementById('origin-input').value = street;
+        });
+    });
+
+    map.on('locationerror', function() {
+      document.getElementById('origin-input').value = "Konum alınamadı, GPS izni verin.";
+    });
+
+    // Antalya Sokak/Cadde Öngörücü Otomatik Arama (Predictive Search)
+    let searchTimeout;
+    function searchPlaces(query) {
+      clearTimeout(searchTimeout);
+      const suggestionsDiv = document.getElementById('suggestions');
+
+      if (query.length < 3) {
+        suggestionsDiv.style.display = 'none';
+        return;
       }
+
+      searchTimeout = setTimeout(() => {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)},Antalya&bounded=1&viewbox=30.4,37.1,31.0,36.7`)
+          .then(res => res.json())
+          .then(data => {
+            suggestionsDiv.innerHTML = '';
+            if (data.length > 0) {
+              suggestionsDiv.style.display = 'block';
+              data.slice(0, 5).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<i class="fa-solid fa-location-dot"></i> <div>${item.display_name}</div>`;
+                div.onclick = () => selectDestination(item.lat, item.lon, item.display_name);
+                suggestionsDiv.appendChild(div);
+              });
+            } else {
+              suggestionsDiv.style.display = 'none';
+            }
+          });
+      }, 400);
+    }
+
+    // Hedef Seçimi ve Otomatik Canlı Rota Çizme
+    function selectDestination(lat, lon, name) {
+      document.getElementById('suggestions').style.display = 'none';
+      document.getElementById('dest-input').value = name.split(',')[0];
+
+      const destLatLng = L.latLng(lat, lon);
+
+      if (destMarker) map.removeLayer(destMarker);
+      destMarker = L.marker(destLatLng).addTo(map).bindPopup(name.split(',')[0]).openPopup();
+
+      // Rota Çiz
+      if (routingControl) map.removeControl(routingControl);
+      routingControl = L.Routing.control({
+        waypoints: [
+          userLatLng || L.latLng(36.8848, 30.7056),
+          destLatLng
+        ],
+        show: false,
+        lineOptions: { styles: [{ color: '#f1c40f', opacity: 0.9, weight: 6 }] }
+      }).addTo(map);
     }
   </script>
 </body>
