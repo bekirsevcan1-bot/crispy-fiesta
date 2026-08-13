@@ -2,94 +2,139 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaksiCepte - Antalya</title>
+  
+  <!-- Leaflet Harita CSS ve JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #1a1e24; }
-    #map { width: 100%; height: 100%; z-index: 1; }
-    
-    /* Arama Paneli */
-    .top-panel { position: absolute; top: 15px; left: 15px; right: 15px; z-index: 9999; }
-    .search-card { background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
-    .input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    input { width: 100%; border: none; outline: none; font-size: 14px; }
-    .suggestions-list { background: #fff; border-radius: 12px; margin-top: 5px; max-height: 200px; overflow-y: auto; display: none; }
-    .suggestion-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
 
-    /* TAKSİ ÇAĞIR KARTI - Sabit ve Her Şeyin Üstünde */
-    #ride-card {
-        position: fixed; bottom: 80px; left: 15px; right: 15px; z-index: 999999 !important;
-        background: #212730; border-radius: 20px; padding: 20px;
-        border: 2px solid #f1c40f; display: none; /* JS ile görünür olacak */
-        flex-direction: column; gap: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; font-family: sans-serif; overflow: hidden; }
+    #map { width: 100%; height: 100vh; z-index: 1; }
+
+    /* Üst Arama / Durum Paneli */
+    .top-panel {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: 90%;
+      max-width: 400px;
     }
-    .btn-call-taxi {
-        width: 100%; padding: 15px; background: #f1c40f; color: #000;
-        border: none; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer;
+    .status-card {
+      background: #ffffff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      text-align: center;
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    /* Konumuma Git Butonu */
+    .locate-btn {
+      position: absolute;
+      bottom: 30px;
+      right: 20px;
+      z-index: 1000;
+      background: #ffcc00;
+      color: #000;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 50px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
 
   <div class="top-panel">
-    <div class="search-card">
-      <input type="text" id="dest-input" placeholder="Nereye gitmek istersiniz?" oninput="searchPlaces(this.value)">
+    <div class="status-card" id="statusText">
+      📍 Canlı konum aranıyor...
     </div>
-    <div id="suggestions" class="suggestions-list"></div>
   </div>
 
-  <div id="ride-card">
-    <div style="color:#fff;">
-      <div id="selected-dest-title" style="font-weight:bold;">Hedef Seçildi</div>
-      <div id="estimated-price" style="font-size:20px; color:#f1c40f; margin-top:5px;">~₺0</div>
-    </div>
-    <button class="btn-call-taxi" onclick="alert('Taksi çağrıldı!')">TAKSİ ÇAĞIR</button>
-  </div>
+  <button class="locate-btn" onclick="centerUserLocation()">📍 Konumuma Odaklan</button>
+
+  <div id="map"></div>
 
   <script>
-    const map = L.map('map').setView([36.8848, 30.7056], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    // 1. Haritayı Varsayılan Olarak Antalya Merkezli Başlat
+    const map = L.map('map').setView([36.884804, 30.705623], 13);
 
-    function searchPlaces(query) {
-      if(query.length < 3) return;
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}+Antalya`)
-        .then(res => res.json())
-        .then(data => {
-            const list = document.getElementById('suggestions');
-            list.innerHTML = '';
-            list.style.display = 'block';
-            data.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'suggestion-item';
-                div.innerText = item.display_name.split(',')[0];
-                div.onclick = () => showCard(item);
-                list.appendChild(div);
-            });
-        });
+    // OpenStreetMap Telif Açık Katmanı
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let userMarker = null;
+    let userCoords = null;
+
+    // Custom Yolcu/Sürücü İkonu
+    const userIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [36, 36],
+      iconAnchor: [18, 36]
+    });
+
+    // 2. Canlı Konum Takibi (watchPosition)
+    function startLiveTracking() {
+      if (!navigator.geolocation) {
+        document.getElementById('statusText').innerText = "❌ Tarayıcınız GPS desteklemiyor.";
+        return;
+      }
+
+      const options = {
+        enableHighAccuracy: true, // Yüksek GPS hassasiyeti
+        timeout: 10000,           // 10 saniye zaman aşımı
+        maximumAge: 0             // Önbellekteki eski konumu kullanma
+      };
+
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          userCoords = [lat, lng];
+
+          // Haritadaki konumu güncelle veya yeni ekle
+          if (userMarker) {
+            userMarker.setLatLng(userCoords);
+          } else {
+            userMarker = L.marker(userCoords, { icon: userIcon }).addTo(map)
+              .bindPopup("<b>Mevcut Konumunuz</b>").openPopup();
+            map.setView(userCoords, 16); // İlk bulunduğunda konuma zum yap
+          }
+
+          document.getElementById('statusText').innerText = "✅ Canlı konum aktif";
+        },
+        (error) => {
+          console.error("GPS Hatası:", error);
+          let msg = "⚠️ Konum alınamadı.";
+          if (error.code === 1) msg = "⚠️ Lütfen konum izni verin.";
+          document.getElementById('statusText').innerText = msg;
+        },
+        options
+      );
     }
 
-    function showCard(item) {
-        document.getElementById('suggestions').style.display = 'none';
-        document.getElementById('dest-input').value = item.display_name.split(',')[0];
-        
-        // KARTI GÖSTERME KOMUTU
-        const card = document.getElementById('ride-card');
-        card.style.display = 'flex'; 
-        card.style.visibility = 'visible';
-        
-        document.getElementById('selected-dest-title').innerText = item.display_name.split(',')[0];
-        document.getElementById('estimated-price').innerText = "~₺" + (Math.floor(Math.random() * 50) + 40);
-        
-        L.marker([item.lat, item.lon]).addTo(map).bindPopup("Hedef").openPopup();
+    // Konuma Manuel Odaklanma Butonu
+    function centerUserLocation() {
+      if (userCoords) {
+        map.setView(userCoords, 17, { animate: true });
+      } else {
+        alert("Henüz konumunuz tespit edilemedi. Lütfen konum izinlerini kontrol edin.");
+      }
     }
+
+    // Uygulama Başladığında Canlı Takibi Başlat
+    startLiveTracking();
   </script>
 </body>
 </html>
