@@ -132,6 +132,20 @@
     function taksimiBul() {
       alert("En yakın taksi aranıyor... Konumunuz alındı!");
     }
-  </script>
+  </script>// Konum bulma özelliği
+map.locate({setView: true, maxZoom: 16});
+
+function onLocationFound(e) {
+    var radius = e.accuracy;
+    L.marker(e.latlng).addTo(map).bindPopup("Buradasınız").openPopup();
+    L.circle(e.latlng, radius).addTo(map);
+}
+map.on('locationfound', onLocationFound);
+
+function onLocationError(e) {
+    alert("Konumunuza erişilemedi: " + e.message);
+}
+map.on('locationerror', onLocationError);
+
 </body>
 </html>
