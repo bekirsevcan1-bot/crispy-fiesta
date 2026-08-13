@@ -1,0 +1,57 @@
+{
+  "name": "taksi-cepte",
+  "version": "1.0.0",
+  "description": "Antalya Bölge Seçim Sistemi - Taksi Çağrı Uygulaması",
+  "author": "Taksi Çepte Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bekirsevcan1-bot/crispy-fiesta"
+  },
+  "keywords": [
+    "taksi",
+    "antalya",
+    "bölge-seçimi",
+    "lokasyon",
+    "semt",
+    "mahalle",
+    "sokak"
+  ],
+  "features": {
+    "regions": 10,
+    "neighborhoods": 48,
+    "streets": 500,
+    "searchable": true,
+    "responsive": true,
+    "mobile_friendly": true
+  },
+  "structure": {
+    "html": "index.html - Ana kullanıcı arayüzü",
+    "javascript": [
+      "app.js - Uygulama mantığı ve kontroller",
+      "data.js - Antalya bölge verileri"
+    ]
+  },
+  "regions": [
+    "Muratpaşa",
+    "Kepez",
+    "Konyaaltı",
+    "Aksu",
+    "Kaş",
+    "Kaleiçi",
+    "Manavgat",
+    "Alanya",
+    "Side",
+    "Serik"
+  ],
+  "browser_support": [
+    "Chrome 90+",
+    "Firefox 88+",
+    "Safari 14+",
+    "Edge 90+"
+  ],
+  "cdn": {
+    "url": "https://taksi-cepte.base44.app",
+    "status": "active"
+  }
+}
