@@ -1,220 +1,137 @@
-
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Taksi Çepte - Antalya</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Taksi Çepte</title>
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+  <!-- Leaflet Harita Kütüphanesi -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
+  <!-- İkonlar -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
+    #map { width: 100%; height: 100vh; z-index: 1; }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+    .app-header {
+      position: absolute; top: 0; left: 0; right: 0;
+      background: #000; color: #fff;
+      padding: 15px 20px; font-size: 20px; font-weight: bold;
+      z-index: 1000; display: flex; align-items: center;
+    }
 
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 30px;
-        }
+    .search-container {
+      position: absolute; top: 70px; left: 15px; right: 15px;
+      z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+    }
 
-        @media (max-width: 768px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-        }
+    .search-box {
+      background: #fff; border-radius: 12px;
+      padding: 12px 16px; display: flex; align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .search-box input {
+      border: none; outline: none; width: 100%;
+      font-size: 15px; color: #333; margin-left: 10px;
+    }
 
-        .section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            border: 2px solid #e9ecef;
-        }
+    .recent-places {
+      background: #fff; border-radius: 12px;
+      overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .place-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border-bottom: 1px solid #eee;
+      font-size: 13px; color: #444; cursor: pointer;
+    }
+    .place-item:last-child { border-bottom: none; }
+    .place-item i { color: #666; font-size: 16px; }
 
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
+    .btn-find-taxi {
+      background: #000; color: #fff; border: none;
+      width: 100%; padding: 16px; border-radius: 12px;
+      font-size: 16px; font-weight: bold; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-top: 5px;
+    }
 
-        select, input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
+    .bottom-nav {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: #000; display: flex; justify-content: space-around;
+      padding: 10px 0 20px 0; z-index: 1000; border-top: 1px solid #222;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center;
+      color: #888; font-size: 11px; text-decoration: none; gap: 4px;
+    }
+    .nav-item.active { color: #fff; }
+    .nav-item i { font-size: 18px; }
+  </style>
+</head>
+<body>
 
-        select:focus, input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-        }
+  <div class="app-header">Taksi Çepte</div>
 
-        .list-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            padding: 10px;
-        }
+  <div class="search-container">
+    <div class="search-box">
+      <i class="fa-solid fa-plus" style="color: #888;"></i>
+      <input type="text" placeholder="Ara Durak Eklemek İster Misiniz?">
+    </div>
 
-        .list-item {
-            padding: 10px 15px;
-            margin: 5px 0;
-            background: white;
-            border-left: 4px solid #667eea;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    <div class="recent-places">
+      <div class="place-item">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <div><strong>Kepez Polis Merkezi Amirliği</strong>, Güneş, Kepez/Antalya</div>
+      </div>
+      <div class="place-item">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <div><strong>Beach Park</strong>, Arapsuyu, Konyaaltı/Antalya</div>
+      </div>
+      <div class="place-item">
+        <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
+        <div><strong>Konyaaltı Orman İşletme Müdürlüğü</strong>, Meltem/Antalya</div>
+      </div>
+    </div>
 
-        .list-item:hover {
-            background: #f0f4ff;
-            transform: translateX(5px);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-        }
+    <button class="btn-find-taxi" onclick="taksimiBul()">
+      <i class="fa-solid fa-magnifying-glass"></i> Bana en yakın Taksi'yi bul
+    </button>
+  </div>
 
-        .list-item.selected {
-            background: #667eea;
-            color: white;
-        }
+  <div id="map"></div>
 
-        .icon {
-            font-size: 1.3em;
-        }
+  <div class="bottom-nav">
+    <a href="#" class="nav-item active"><i class="fa-solid fa-car"></i>Taksi Çepte</a>
+    <a href="#" class="nav-item"><i class="fa-solid fa-qrcode"></i>Transferlerim</a>
+    <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i>Bildirimler</a>
+    <a href="#" class="nav-item"><i class="fa-solid fa-user"></i>Hesabım</a>
+  </div>
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
+  <script>
+    const map = L.map('map', { zoomControl: false }).setView([36.884804, 30.705601], 13);
 
-        .stat-box {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid #667eea;
-        }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-        .stat-box .number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
-        }
+    const taxiIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+      iconSize: [35, 35]
+    });
 
-        .stat-box .label {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
-        }
+    L.marker([36.885, 30.705], {icon: taxiIcon}).addTo(map);
+    L.marker([36.890, 30.690], {icon: taxiIcon}).addTo(map);
+    L.marker([36.875, 30.715], {icon: taxiIcon}).addTo(map);
 
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .info-box {
-            background: #e8f4f8;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #0084ff;
-            margin-top: 15px;
-        }
-
-        .info-box p {
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .footer {
-            background: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            color: #666;
-            border-top: 1px solid #ddd;
-        }
-
-        .search-box {
-            position: relative;
-            margin-bottom: 15px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding-left: 40px;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 12px;
-            top: 12px;
-            color: #999;
-        }
-
-        .badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            margin-left
+    function taksimiBul() {
+      alert("En yakın taksi aranıyor... Konumunuz alındı!");
+    }
+  </script>
+</body>
+</html>
