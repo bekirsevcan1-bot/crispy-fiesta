@@ -83,7 +83,7 @@
       width: 100%; border: none; outline: none; font-size: 14px; font-weight: 500; color: #222;
     }
 
-    /* Otomatik Tamamlama (Öngörücü) Listesi */
+    /* Otomatik Tamamlama Listesi */
     .suggestions-list {
       background: #fff; border-radius: 12px; max-height: 180px; overflow-y: auto;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-top: 5px; display: none;
@@ -206,34 +206,57 @@
       map = L.map('map', { zoomControl: false }).setView([36.8848, 30.7056], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-      // Konumu Al
+      // Konumu Doğrudan HTML5 Geolocation ile Al
       getCurrentLocation();
     }
 
-    // GPS Otomatik Konum Bulma
+    // Doğrudan Cihaz GPS Servisi İle Konum Bulma
     function getCurrentLocation() {
-      map.locate({setView: true, maxZoom: 16});
+      const input = document.getElementById('origin-input');
+      input.value = "📍 Konum aranıyor...";
+
+      if (!navigator.geolocation) {
+        input.value = "Cihazınız konum servisini desteklemiyor.";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          userLatLng = L.latLng(lat, lng);
+
+          // Haritayı konuma odakla
+          map.setView(userLatLng, 16);
+
+          // Konum Marker'ını güncelle
+          if(userMarker) map.removeLayer(userMarker);
+          userMarker = L.marker(userLatLng).addTo(map).bindPopup("Mevcut Konumunuz").openPopup();
+
+          // Adresi yazdır (Reverse Geocoding)
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(data => {
+              const street = data.address.road || data.address.suburb || data.address.town || "Mevcut Konum (Antalya)";
+              input.value = street;
+            })
+            .catch(() => {
+              input.value = `Konum Bulundu (${lat.toFixed(3)}, ${lng.toFixed(3)})`;
+            });
+        },
+        (error) => {
+          if(error.code === error.PERMISSION_DENIED) {
+            alert("Lütfen tarayıcıdan/telefondan konum iznini onaylayın!");
+            input.value = "Konum izni reddedildi.";
+          } else {
+            input.value = "Konum alınamadı. Haritadan seçin.";
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+      );
     }
 
-    map.on('locationfound', function(e) {
-      userLatLng = e.latlng;
-      if(userMarker) map.removeLayer(userMarker);
-      userMarker = L.marker(e.latlng).addTo(map).bindPopup("Mevcut Konumunuz").openPopup();
-
-      // Adresi ters çevirip kutuya yaz (Reverse Geocoding)
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}`)
-        .then(res => res.json())
-        .then(data => {
-          const street = data.address.road || data.address.suburb || "Antalya (Mevcut Konum)";
-          document.getElementById('origin-input').value = street;
-        });
-    });
-
-    map.on('locationerror', function() {
-      document.getElementById('origin-input').value = "Konum alınamadı, GPS izni verin.";
-    });
-
-    // Antalya Sokak/Cadde Öngörücü Otomatik Arama (Predictive Search)
+    // Antalya Sokak/Cadde Arama
     let searchTimeout;
     function searchPlaces(query) {
       clearTimeout(searchTimeout);
@@ -265,7 +288,7 @@
       }, 400);
     }
 
-    // Hedef Seçimi ve Otomatik Canlı Rota Çizme
+    // Hedef Seçimi ve Rota Çizimi
     function selectDestination(lat, lon, name) {
       document.getElementById('suggestions').style.display = 'none';
       document.getElementById('dest-input').value = name.split(',')[0];
@@ -275,7 +298,6 @@
       if (destMarker) map.removeLayer(destMarker);
       destMarker = L.marker(destLatLng).addTo(map).bindPopup(name.split(',')[0]).openPopup();
 
-      // Rota Çiz
       if (routingControl) map.removeControl(routingControl);
       routingControl = L.Routing.control({
         waypoints: [
