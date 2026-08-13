@@ -1,151 +1,156 @@
-<!DOCTYPE
+<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Taksi Çepte</title>
+  <title>Taksi Çepte - Navigasyon Pro</title>
 
-  <!-- Leaflet Harita Kütüphanesi -->
+  <!-- 1. Leaflet (Harita) Kütüphanesi -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- İkonlar -->
+  <!-- 2. Leaflet Routing Machine (Rota) Kütüphanesi -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+  <!-- 3. İkonlar ve Google Font -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #000; }
 
     #map { width: 100%; height: 100vh; z-index: 1; }
 
-    .app-header {
-      position: absolute; top: 0; left: 0; right: 0;
-      background: #000; color: #fff;
-      padding: 15px 20px; font-size: 20px; font-weight: bold;
-      z-index: 1000; display: flex; align-items: center;
-    }
-
-    .search-container {
-      position: absolute; top: 70px; left: 15px; right: 15px;
+    /* Üst Arama UI'ı (Sarı İnci Tarzı) */
+    .ui-overlay-top {
+      position: absolute; top: 15px; left: 15px; right: 15px;
       z-index: 1000; display: flex; flex-direction: column; gap: 8px;
     }
 
-    .search-box {
+    .header-bar {
+      background: #000; color: #fff; border-radius: 12px;
+      padding: 15px; font-weight: 600; font-size: 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    .search-input-group {
       background: #fff; border-radius: 12px;
-      padding: 12px 16px; display: flex; align-items: center;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
-    .search-box input {
+    .search-input-group i { color: #888; font-size: 18px; }
+    .search-input-group input {
       border: none; outline: none; width: 100%;
-      font-size: 15px; color: #333; margin-left: 10px;
+      font-size: 15px; color: #333;
     }
 
-    .recent-places {
-      background: #fff; border-radius: 12px;
-      overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    /* Alt Kontrol UI'ı */
+    .ui-overlay-bottom {
+      position: absolute; bottom: 30px; left: 15px; right: 15px;
+      z-index: 1000; display: flex; flex-direction: column; gap: 8px;
     }
-    .place-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; border-bottom: 1px solid #eee;
-      font-size: 13px; color: #444; cursor: pointer;
-    }
-    .place-item:last-child { border-bottom: none; }
-    .place-item i { color: #666; font-size: 16px; }
 
-    .btn-find-taxi {
+    .btn-action {
       background: #000; color: #fff; border: none;
       width: 100%; padding: 16px; border-radius: 12px;
-      font-size: 16px; font-weight: bold; cursor: pointer;
+      font-size: 16px; font-weight: 600; cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-top: 5px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
+    .btn-action:hover { background: #222; }
 
-    .bottom-nav {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      background: #000; display: flex; justify-content: space-around;
-      padding: 10px 0 20px 0; z-index: 1000; border-top: 1px solid #222;
-    }
-    .nav-item {
-      display: flex; flex-direction: column; align-items: center;
-      color: #888; font-size: 11px; text-decoration: none; gap: 4px;
-    }
-    .nav-item.active { color: #fff; }
-    .nav-item i { font-size: 18px; }
+    /* Rota Talimatlar Paneli (Gizli) */
+    .leaflet-routing-container { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div class="app-header">Taksi Çepte</div>
-
-  <div class="search-container">
-    <div class="search-box">
-      <i class="fa-solid fa-plus" style="color: #888;"></i>
-      <input type="text" placeholder="Ara Durak Eklemek İster Misiniz?">
+  <!-- Üst Arayüz -->
+  <div class="ui-overlay-top">
+    <div class="header-bar">
+      <span>Taksi Çepte</span>
+      <i class="fa-solid fa-bars"></i>
     </div>
-
-    <div class="recent-places">
-      <div class="place-item">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <div><strong>Kepez Polis Merkezi Amirliği</strong>, Güneş, Kepez/Antalya</div>
-      </div>
-      <div class="place-item">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <div><strong>Beach Park</strong>, Arapsuyu, Konyaaltı/Antalya</div>
-      </div>
-      <div class="place-item">
-        <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
-        <div><strong>Konyaaltı Orman İşletme Müdürlüğü</strong>, Meltem/Antalya</div>
-      </div>
+    <div class="search-input-group">
+      <i class="fa-solid fa-location-dot" style="color: #e74c3c;"></i>
+      <input type="text" id="destination" placeholder="Nereye Gidilecek? (Örn: Konyaaltı Beach)">
     </div>
+  </div>
 
-    <button class="btn-find-taxi" onclick="taksimiBul()">
-      <i class="fa-solid fa-magnifying-glass"></i> Bana en yakın Taksi'yi bul
+  <!-- Harita Alanı -->
+  <div id="map"></div>
+
+  <!-- Alt Arayüz -->
+  <div class="ui-overlay-bottom">
+    <button class="btn-action" onclick="rotaCiz()">
+      <i class="fa-solid fa-route"></i> Rota Çiz ve Taksi Ara
     </button>
   </div>
 
-  <div id="map"></div>
-
-  <div class="bottom-nav">
-    <a href="#" class="nav-item active"><i class="fa-solid fa-car"></i>Taksi Çepte</a>
-    <a href="#" class="nav-item"><i class="fa-solid fa-qrcode"></i>Transferlerim</a>
-    <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i>Bildirimler</a>
-    <a href="#" class="nav-item"><i class="fa-solid fa-user"></i>Hesabım</a>
-  </div>
-
   <script>
+    // 1. Haritayı Başlat (Antalya Merkez Odaklı)
     const map = L.map('map', { zoomControl: false }).setView([36.884804, 30.705601], 13);
 
+    // OpenStreetMap Harita Katmanı
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const taxiIcon = L.icon({
-      iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-      iconSize: [35, 35]
-    });
+    let userMarker, destinationMarker, routingControl;
 
-    L.marker([36.885, 30.705], {icon: taxiIcon}).addTo(map);
-    L.marker([36.890, 30.690], {icon: taxiIcon}).addTo(map);
-    L.marker([36.875, 30.715], {icon: taxiIcon}).addTo(map);
+    // 2. Canlı GPS Konumunu Al
+    map.locate({setView: true, maxZoom: 16});
 
-    function taksimiBul() {
-      alert("En yakın taksi aranıyor... Konumunuz alındı!");
+    function onLocationFound(e) {
+      if (userMarker) map.removeLayer(userMarker);
+      userMarker = L.marker(e.latlng).addTo(map).bindPopup("Siz Buradasınız").openPopup();
     }
-  </script>// Konum bulma özelliği
-map.locate({setView: true, maxZoom: 16});
+    map.on('locationfound', onLocationFound);
 
-function onLocationFound(e) {
-    var radius = e.accuracy;
-    L.marker(e.latlng).addTo(map).bindPopup("Buradasınız").openPopup();
-    L.circle(e.latlng, radius).addTo(map);
-}
-map.on('locationfound', onLocationFound);
+    function onLocationError(e) {
+      alert("Konumunuza erişilemedi, lütfen izin verin.");
+    }
+    map.on('locationerror', onLocationError);
 
-function onLocationError(e) {
-    alert("Konumunuza erişilemedi: " + e.message);
-}
-map.on('locationerror', onLocationError);
+    // 3. Rota Çizme ve Konum Bulma Fonksiyonu (Gerçek Zamanlı)
+    async function rotaCiz() {
+      const destination = document.getElementById('destination').value;
+      if (!destination) return alert("Lütfen gidilecek yeri yazın!");
 
+      // Adresi koordinata çevir (Geocoding)
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${destination},Antalya`);
+      const data = await response.json();
+      
+      if (data.length > 0) {
+        const destCoords = [data[0].lat, data[0].lon];
+
+        // Varsa eski rota ve markerları sil
+        if (routingControl) map.removeControl(routingControl);
+        if (destinationMarker) map.removeLayer(destinationMarker);
+
+        // Varış noktasına marker ekle
+        destinationMarker = L.marker(destCoords).addTo(map).bindPopup(destination).openPopup();
+
+        // Rota çizgisini ekle
+        routingControl = L.Routing.control({
+          waypoints: [
+            userMarker.getLatLng(),
+            L.latLng(destCoords)
+          ],
+          routeWhileDragging: false,
+          show: false, // Talimat panelini gizle
+          lineOptions: { styles: [{ color: '#2c3e50', opacity: 0.8, weight: 6 }] } // Mavi rota çizgisi
+        }).addTo(map);
+
+        alert("Rota çizildi! Taksi sizi bekliyor.");
+      } else {
+        alert("Konum bulunamadı, daha detaylı yazmayı deneyin (Örn: Konyaaltı Belediyesi).");
+      }
+    }
+  </script>
 </body>
 </html>
